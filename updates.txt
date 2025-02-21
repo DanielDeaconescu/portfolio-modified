@@ -1,0 +1,32 @@
+1. create a logo for DanielDev (done)
+2. replace the background image of the header with just a color (done)
+3. on max-width of 576px, I want to see the icons of github, codewars and frontend mentor displayed in line (done)
+4. write the introduction (done)
+5. write the "tabbed-component" (done)
+    5.1 re-build the tabbed component, it has a bug
+    5.2 on the mobile, each tab must be in-line and only have the icon shown 
+6. in the portfolio section, use a bootstrap 5 card for each project (done)
+    6.1 use a bootstrap modal for the form as well (done)
+    6.2 re-do the form from scratch (done) - needs some improvements
+    6.2 make sure that the X button does not have a border around it when clicked
+    6.3 implement the form functionality in "process_form.php"
+    6.4 whenever the form is closed (Escape, X, Cancel, clicking outside), it should also reset
+    6.5 fix the problem with "Preview Project"
+7. for the "currently-learning", write some info regarding what I currently learn specifically in React & PHP
+8. try to build the blog section with PHP based on Brad's tutorial
+9. think of other elements to put inside the footer
+10. implement the navigation seen in Kevin's video
+11. create a white version of "codewars" and "github" logos
+12. implement a section under the blog with "completed courses" and list the completed courses
+13. Finish building the CV that will be downloaded with "Download resume"
+14. Re-do the tabbed component (done)
+    14.1 use a .container for wrapping the tabs and the descriptions (done)
+15. implement the functionality of the "back-to-top" button (done)
+16. Add a title to the tabbed component - 'My skills"
+17. React tab - rebuild the quiz and make it about Galileo Galilei and then list it under "What I built with it"
+    17.0 rebuild the app using vite (done)
+    17.1 start screen -> allow the user to select a certain number of questions / allow user to filter for the difficulty of questions (done)
+    17.2 upload the highscore to the fake API and then when the app is reloaded, fetch the highscore as well [set the highscore to the local storage] (done)
+    17.3 we could store all the answers in an array and allow the user to go back and forth between the answers
+    17.4 make sure that the quiz is fully responsive
+    15.5 fix the problem with loading the questions from the json-servers
