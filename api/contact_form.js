@@ -84,7 +84,10 @@ export default async function handler(req, res) {
     await transporter.sendMail(mailOptions);
 
     // Return success message to the client
-    return res.redirect(302, "/submitted/ask_question.html");
+    // return res.redirect(302, "/submitted/ask_question.html");
+    return res.status(200).json({
+      message: "Mesajul a fost trimis cu succes! Mulțumim pentru mesajul tău.",
+    });
   } catch (error) {
     console.error("Eroare la transmiterea mesajului: ", error);
     return res
