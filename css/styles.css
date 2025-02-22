@@ -11,8 +11,8 @@
   padding: 0;
 }
 
-ul[role=list],
-ol[role=list] {
+ul[role="list"],
+ol[role="list"] {
   list-style: none;
 }
 
@@ -539,6 +539,15 @@ select {
 
 .closing-button:hover {
   color: #fff;
+}
+
+/* submitted - contact_form_submitted */
+.submitted-body {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 @media (max-width: 577px) {
