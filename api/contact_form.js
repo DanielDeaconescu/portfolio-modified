@@ -1,12 +1,6 @@
 import nodemailer from "nodemailer";
 import axios from "axios";
-import { IncomingMessage } from "http"; // For type reference in JSDoc
-
-/**
- * Parses URL-encoded form data from a raw request stream.
- * @param {IncomingMessage} req - The incoming request object.
- * @returns {Promise<Object>} - The parsed form data.
- */
+import { IncomingMessage } from "http";
 function parseFormData(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -77,8 +71,8 @@ export default async function handler(req, res) {
     const mailOptions = {
       from: process.env.SMTP_USER,
       to: "daniel.deaconescu98@gmail.com", // Change this to your email
-      subject: "Întrebare nouă de la client",
-      text: `Nume complet: ${fullName}\nCompanie: ${companyName}\nEmail: ${email}\nMesaj: ${message}`,
+      subject: "Someone filled out the form on danieldeaconescu.com",
+      text: `Full Name: ${fullName}\nCompany: ${companyName}\nEmail: ${email}\nMessage: ${message}`,
     };
 
     await transporter.sendMail(mailOptions);
