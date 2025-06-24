@@ -261,6 +261,10 @@ select {
   height: 600px;
 }
 
+.project-link {
+  color: #fff;
+}
+
 .bootstrap-container {
   position: relative;
 }
