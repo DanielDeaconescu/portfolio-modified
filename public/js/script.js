@@ -300,3 +300,5 @@ contactForm.addEventListener("submit", async (e) => {
   const formData = new FormData(form);
   console.log(formData);
 });
+
+console.log(contactForm);
