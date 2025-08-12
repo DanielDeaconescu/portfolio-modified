@@ -294,14 +294,14 @@ function windowScroll() {
 document.addEventListener("DOMContentLoaded", windowScroll);
 
 // Processing the form
-// Callback for Turnstile response (you already have this, keep it!)
+// Callback for Turnstile response (keep your existing function)
 function setTurnstileResponse(token) {
   document.getElementById("cf-turnstile-response").value = token;
 }
 
 const form = document.getElementById("contactForm");
 const resultDiv = document.createElement("div");
-form.parentNode.insertBefore(resultDiv, form.nextSibling); // show messages just after form
+form.parentNode.insertBefore(resultDiv, form.nextSibling); // Insert message div after form
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -327,11 +327,11 @@ form.addEventListener("submit", async (event) => {
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: urlEncodedData.toString(),
-      redirect: "manual", // so we can handle redirects manually
+      redirect: "manual", // so we handle redirects manually
     });
 
     if (response.status === 302) {
-      // Successful submission: redirect to thank you page
+      // Success: redirect user to thank you page
       const redirectUrl = response.headers.get("Location");
       if (redirectUrl) {
         window.location.href = redirectUrl;
@@ -339,22 +339,25 @@ form.addEventListener("submit", async (event) => {
         resultDiv.textContent = "Message sent successfully!";
         resultDiv.style.color = "green";
         form.reset();
-        // Reset Turnstile widget as well (optional)
         if (window.turnstile) window.turnstile.reset();
       }
     } else {
-      // Something went wrong — get error message from response JSON
+      // Handle errors - parse JSON if possible, else text
       let errorMessage = "Error sending message.";
       try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
+        // Clone response for alternate read
+        const clone = response.clone();
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch {
+          errorMessage = await clone.text();
+        }
       } catch {
-        // If parsing JSON fails, try text
-        errorMessage = await response.text();
+        // fallback message if something goes wrong
       }
       resultDiv.textContent = errorMessage;
       resultDiv.style.color = "red";
-      // Reset Turnstile widget to let user try CAPTCHA again
       if (window.turnstile) window.turnstile.reset();
     }
   } catch (error) {
