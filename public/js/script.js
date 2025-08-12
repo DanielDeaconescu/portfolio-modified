@@ -294,7 +294,9 @@ function windowScroll() {
 document.addEventListener("DOMContentLoaded", windowScroll);
 
 // Processing the form
-contactForm.addEventListener("submit", function () {
-  const test = fetch("/api/contact_form.js");
-  console.log(test);
+contactForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const formData = new FormData(form);
+  console.log(formData);
 });
