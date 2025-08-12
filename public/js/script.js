@@ -294,11 +294,65 @@ function windowScroll() {
 document.addEventListener("DOMContentLoaded", windowScroll);
 
 // Processing the form
-contactForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
+// Callback for Turnstile response (you already have this, keep it!)
+function setTurnstileResponse(token) {
+  document.getElementById("cf-turnstile-response").value = token;
+}
 
+const form = document.getElementById("contactForm");
+const resultDiv = document.createElement("div");
+form.parentNode.insertBefore(resultDiv, form.nextSibling); // show messages just after form
+
+form.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  // Check CAPTCHA token presence
+  const captchaToken = document.getElementById("cf-turnstile-response").value;
+  if (!captchaToken) {
+    resultDiv.textContent = "Please complete the CAPTCHA challenge.";
+    resultDiv.style.color = "red";
+    return;
+  }
+
+  // Collect form data
   const formData = new FormData(form);
-  console.log(formData);
-});
 
-console.log(contactForm);
+  // Convert FormData to URL-encoded string
+  const urlEncodedData = new URLSearchParams(formData);
+
+  try {
+    const response = await fetch("/api/contact_form", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: urlEncodedData.toString(),
+      redirect: "manual", // so we can handle redirects manually
+    });
+
+    if (response.status === 302) {
+      // Successful submission: redirect to thank you page
+      const redirectUrl = response.headers.get("Location");
+      if (redirectUrl) {
+        window.location.href = redirectUrl;
+      } else {
+        resultDiv.textContent = "Message sent successfully!";
+        resultDiv.style.color = "green";
+        form.reset();
+        // Reset Turnstile widget as well (optional)
+        if (window.turnstile) window.turnstile.reset();
+      }
+    } else {
+      // Something went wrong — get error message from response JSON
+      const errorData = await response.json();
+      resultDiv.textContent = errorData.message || "Error sending message.";
+      resultDiv.style.color = "red";
+      // Reset Turnstile widget to let user try CAPTCHA again
+      if (window.turnstile) window.turnstile.reset();
+    }
+  } catch (error) {
+    resultDiv.textContent = "Error sending message: " + error.message;
+    resultDiv.style.color = "red";
+    if (window.turnstile) window.turnstile.reset();
+  }
+});
