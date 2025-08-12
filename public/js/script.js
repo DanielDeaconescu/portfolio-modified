@@ -366,3 +366,5 @@ form.addEventListener("submit", async (event) => {
     if (window.turnstile) window.turnstile.reset();
   }
 });
+
+console.log("Hello, world!");
