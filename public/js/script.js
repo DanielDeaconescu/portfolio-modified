@@ -344,8 +344,15 @@ form.addEventListener("submit", async (event) => {
       }
     } else {
       // Something went wrong — get error message from response JSON
-      const errorData = await response.json();
-      resultDiv.textContent = errorData.message || "Error sending message.";
+      let errorMessage = "Error sending message.";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        // If parsing JSON fails, try text
+        errorMessage = await response.text();
+      }
+      resultDiv.textContent = errorMessage;
       resultDiv.style.color = "red";
       // Reset Turnstile widget to let user try CAPTCHA again
       if (window.turnstile) window.turnstile.reset();
