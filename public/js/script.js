@@ -292,3 +292,9 @@ function windowScroll() {
 }
 
 document.addEventListener("DOMContentLoaded", windowScroll);
+
+// Processing the form
+contactForm.addEventListener("submit", function () {
+  const test = fetch("/api/contact_form.js");
+  console.log(test);
+});
