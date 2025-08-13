@@ -297,54 +297,56 @@ document.addEventListener("DOMContentLoaded", windowScroll);
 document
   .getElementById("contactForm")
   .addEventListener("submit", async function (e) {
-    e.preventDefault(); // Prevent default form submission
+    e.preventDefault();
 
-    // Get form elements
+    const turnstileToken = document.getElementById(
+      "cf-turnstile-response"
+    ).value;
+    if (!turnstileResponse) {
+      alert("Please complete the CAPTCHA verification");
+      return;
+    }
+
     const form = e.target;
     const submitBtn = form.querySelector(".submit-btn");
     const originalBtnText = submitBtn.value;
 
     try {
-      // Disable submit button to prevent multiple submissions
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // Get form data
+      // Get form data and log it
       const formData = new FormData(form);
+      console.log("FormData entries:");
+      for (let [key, value] of formData.entries()) {
+        console.log(key, value);
+      }
 
-      // Send the request to your Vercel endpoint
-      const response = await fetch("/api/contact_form", {
+      // Convert to URLSearchParams to match backend expectation
+      const urlEncodedData = new URLSearchParams(formData).toString();
+      console.log("URLEncoded data:", urlEncodedData);
+
+      const response = await fetch("/api/contact_form.js", {
         method: "POST",
-        body: formData,
+        body: urlEncodedData,
         headers: {
-          // Note: Don't set Content-Type when using FormData,
-          // the browser will set it automatically with the correct boundary
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       });
 
       if (response.redirected) {
-        // If the response is a redirect (as your backend does on success)
         window.location.href = response.url;
       } else {
-        // Handle JSON responses (errors)
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.message || "Failed to submit form");
         }
       }
     } catch (error) {
-      // Show error message to user
       alert(error.message || "An error occurred while submitting the form");
       console.error("Form submission error:", error);
     } finally {
-      // Re-enable the submit button
       submitBtn.disabled = false;
       submitBtn.value = originalBtnText;
     }
   });
-
-// Handle cancel button click if needed
-document.querySelector(".cancel-btn").addEventListener("click", function () {
-  // Reset form or close modal, depending on your implementation
-  document.getElementById("contactForm").reset();
-});
