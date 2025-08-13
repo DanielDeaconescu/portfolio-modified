@@ -299,36 +299,43 @@ document
   .addEventListener("submit", async function (e) {
     e.preventDefault();
 
-    const turnstileToken = document.getElementById(
-      "cf-turnstile-response"
-    ).value;
-    if (!turnstileResponse) {
-      alert("Please complete the CAPTCHA verification");
-      return;
-    }
-
     const form = e.target;
     const submitBtn = form.querySelector(".submit-btn");
     const originalBtnText = submitBtn.value;
 
     try {
+      // First check if Turnstile token exists
+      const turnstileToken = document.getElementById(
+        "cf-turnstile-response"
+      ).value;
+      if (!turnstileToken) {
+        alert("Please complete the CAPTCHA verification");
+        return;
+      }
+
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // Get form data and log it
-      const formData = new FormData(form);
-      console.log("FormData entries:");
-      for (let [key, value] of formData.entries()) {
-        console.log(key, value);
-      }
+      // Create FormData and manually append all fields
+      const formData = new FormData();
+      formData.append("full-name", form.elements["full-name"].value);
+      formData.append("company-name", form.elements["company-name"].value);
+      formData.append("email", form.elements["email"].value);
+      formData.append("message", form.elements["message"].value);
+      formData.append("cf-turnstile-response", turnstileToken);
 
-      // Convert to URLSearchParams to match backend expectation
-      const urlEncodedData = new URLSearchParams(formData).toString();
-      console.log("URLEncoded data:", urlEncodedData);
+      // Log the data being sent (for debugging)
+      console.log("Submitting:", {
+        "full-name": form.elements["full-name"].value,
+        "company-name": form.elements["company-name"].value,
+        email: form.elements["email"].value,
+        message: form.elements["message"].value,
+        "cf-turnstile-response": turnstileToken,
+      });
 
       const response = await fetch("/api/contact_form.js", {
         method: "POST",
-        body: urlEncodedData,
+        body: new URLSearchParams(formData),
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
