@@ -304,7 +304,18 @@ document
     const originalBtnText = submitBtn.value;
 
     try {
-      // First check if Turnstile token exists
+      // 1. Validate required fields
+      const requiredFields = ["full-name", "company-name", "email", "message"];
+      const missingFields = requiredFields.filter(
+        (field) => !form.elements[field].value.trim()
+      );
+
+      if (missingFields.length > 0) {
+        alert(`Please fill in: ${missingFields.join(", ")}`);
+        return;
+      }
+
+      // 2. Verify Turnstile token
       const turnstileToken = document.getElementById(
         "cf-turnstile-response"
       ).value;
@@ -316,41 +327,57 @@ document
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // Create FormData and manually append all fields
-      const formData = new FormData();
-      formData.append("full-name", form.elements["full-name"].value);
-      formData.append("company-name", form.elements["company-name"].value);
-      formData.append("email", form.elements["email"].value);
-      formData.append("message", form.elements["message"].value);
-      formData.append("cf-turnstile-response", turnstileToken);
-
-      // Log the data being sent (for debugging)
-      console.log("Submitting:", {
+      // 3. Prepare form data
+      const formData = {
         "full-name": form.elements["full-name"].value,
         "company-name": form.elements["company-name"].value,
         email: form.elements["email"].value,
         message: form.elements["message"].value,
         "cf-turnstile-response": turnstileToken,
-      });
+      };
+
+      // 4. Add timeout to fetch
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch("/api/contact_form.js", {
         method: "POST",
-        body: new URLSearchParams(formData),
+        body: JSON.stringify(formData),
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
+        signal: controller.signal,
       });
 
+      clearTimeout(timeoutId);
+
+      // 5. Handle response properly
       if (response.redirected) {
         window.location.href = response.url;
-      } else {
+        return;
+      }
+
+      try {
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.message || "Failed to submit form");
         }
+      } catch (jsonError) {
+        // Handle non-JSON responses
+        const text = await response.text();
+        throw new Error(text || "Unexpected response from server");
       }
     } catch (error) {
-      alert(error.message || "An error occurred while submitting the form");
+      // 6. Improved error handling
+      if (error.name === "AbortError") {
+        alert("Request timed out. Please try again.");
+      } else {
+        alert(
+          error.message.includes("An error o")
+            ? "Server error occurred. Please try again later."
+            : error.message
+        );
+      }
       console.error("Form submission error:", error);
     } finally {
       submitBtn.disabled = false;

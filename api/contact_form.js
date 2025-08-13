@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import axios from "axios";
-import { IncomingMessage } from "http";
-function parseFormData(req) {
+
+async function parseJSONBody(req) {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -9,8 +9,11 @@ function parseFormData(req) {
     });
 
     req.on("end", () => {
-      const parsedData = new URLSearchParams(body);
-      resolve(Object.fromEntries(parsedData.entries())); // Convert to object
+      try {
+        resolve(JSON.parse(body));
+      } catch (err) {
+        reject(new Error("Invalid JSON format"));
+      }
     });
 
     req.on("error", (err) => {
@@ -25,8 +28,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse form data manually (since Vercel doesn't parse it automatically)
-    const parsedData = await parseFormData(req);
+    // Parse JSON data from request body
+    const formData = await parseJSONBody(req);
 
     const {
       "full-name": fullName,
@@ -34,8 +37,9 @@ export default async function handler(req, res) {
       email,
       message,
       "cf-turnstile-response": turnstileToken,
-    } = parsedData;
+    } = formData;
 
+    // Validate required fields
     if (!fullName || !companyName || !email || !message || !turnstileToken) {
       return res
         .status(400)
@@ -70,19 +74,32 @@ export default async function handler(req, res) {
     // Email options
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: "daniel.deaconescu98@gmail.com", // Change this to your email
+      to: "daniel.deaconescu98@gmail.com",
       subject: "Someone filled out the form on danieldeaconescu.com",
       text: `Full Name: ${fullName}\nCompany: ${companyName}\nEmail: ${email}\nMessage: ${message}`,
     };
 
-    await transporter.sendMail(mailOptions);
+    // Send email with timeout
+    await Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SMTP timeout")), 10000)
+      ),
+    ]);
 
-    // Return success message to the client
+    // Return success redirect
     return res.redirect(302, "/submitted/contact_form_submitted.html");
   } catch (error) {
-    console.error("Eroare la transmiterea mesajului: ", error);
-    return res
-      .status(500)
-      .json({ message: "Eroare la transmiterea mesajului." });
+    console.error("Eroare la transmiterea mesajului:", error);
+
+    if (error.message === "SMTP timeout") {
+      return res
+        .status(504)
+        .json({ message: "Server timeout. Please try again." });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Eroare la transmiterea mesajului.",
+    });
   }
 }
