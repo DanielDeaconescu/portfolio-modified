@@ -294,77 +294,57 @@ function windowScroll() {
 document.addEventListener("DOMContentLoaded", windowScroll);
 
 // Processing the form
-// Callback for Turnstile response (keep your existing function)
-function setTurnstileResponse(token) {
-  document.getElementById("cf-turnstile-response").value = token;
-}
+document
+  .getElementById("contactForm")
+  .addEventListener("submit", async function (e) {
+    e.preventDefault(); // Prevent default form submission
 
-const form = document.getElementById("contactForm");
-const resultDiv = document.createElement("div");
-form.parentNode.insertBefore(resultDiv, form.nextSibling); // Insert message div after form
+    // Get form elements
+    const form = e.target;
+    const submitBtn = form.querySelector(".submit-btn");
+    const originalBtnText = submitBtn.value;
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+    try {
+      // Disable submit button to prevent multiple submissions
+      submitBtn.disabled = true;
+      submitBtn.value = "Sending...";
 
-  // Check CAPTCHA token presence
-  const captchaToken = document.getElementById("cf-turnstile-response").value;
-  if (!captchaToken) {
-    resultDiv.textContent = "Please complete the CAPTCHA challenge.";
-    resultDiv.style.color = "red";
-    return;
-  }
+      // Get form data
+      const formData = new FormData(form);
 
-  // Collect form data
-  const formData = new FormData(form);
+      // Send the request to your Vercel endpoint
+      const response = await fetch("/api/contact_form.js", {
+        method: "POST",
+        body: formData,
+        headers: {
+          // Note: Don't set Content-Type when using FormData,
+          // the browser will set it automatically with the correct boundary
+        },
+      });
 
-  // Convert FormData to URL-encoded string
-  const urlEncodedData = new URLSearchParams(formData);
-
-  try {
-    const response = await fetch("/api/contact_form", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: urlEncodedData.toString(),
-      redirect: "manual", // so we handle redirects manually
-    });
-
-    if (response.status === 302) {
-      // Success: redirect user to thank you page
-      const redirectUrl = response.headers.get("Location");
-      if (redirectUrl) {
-        window.location.href = redirectUrl;
+      if (response.redirected) {
+        // If the response is a redirect (as your backend does on success)
+        window.location.href = response.url;
       } else {
-        resultDiv.textContent = "Message sent successfully!";
-        resultDiv.style.color = "green";
-        form.reset();
-        if (window.turnstile) window.turnstile.reset();
-      }
-    } else {
-      // Handle errors - parse JSON if possible, else text
-      let errorMessage = "Error sending message.";
-      try {
-        // Clone response for alternate read
-        const clone = response.clone();
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch {
-          errorMessage = await clone.text();
+        // Handle JSON responses (errors)
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to submit form");
         }
-      } catch {
-        // fallback message if something goes wrong
       }
-      resultDiv.textContent = errorMessage;
-      resultDiv.style.color = "red";
-      if (window.turnstile) window.turnstile.reset();
+    } catch (error) {
+      // Show error message to user
+      alert(error.message || "An error occurred while submitting the form");
+      console.error("Form submission error:", error);
+    } finally {
+      // Re-enable the submit button
+      submitBtn.disabled = false;
+      submitBtn.value = originalBtnText;
     }
-  } catch (error) {
-    resultDiv.textContent = "Error sending message: " + error.message;
-    resultDiv.style.color = "red";
-    if (window.turnstile) window.turnstile.reset();
-  }
-});
+  });
 
-console.log("Hello, world!");
+// Handle cancel button click if needed
+document.querySelector(".cancel-btn").addEventListener("click", function () {
+  // Reset form or close modal, depending on your implementation
+  document.getElementById("contactForm").reset();
+});
