@@ -304,7 +304,7 @@ document
     const originalBtnText = submitBtn.value;
 
     try {
-      // Client-side validation
+      // Validate fields
       const requiredFields = ["full-name", "company-name", "email", "message"];
       const missingFields = requiredFields.filter(
         (field) => !form.elements[field].value.trim()
@@ -315,7 +315,10 @@ document
         return;
       }
 
-      if (!document.getElementById("cf-turnstile-response").value) {
+      const turnstileToken = document.getElementById(
+        "cf-turnstile-response"
+      ).value;
+      if (!turnstileToken) {
         alert("Please complete the CAPTCHA verification");
         return;
       }
@@ -323,20 +326,12 @@ document
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // Prepare form data
       const formData = new URLSearchParams();
       formData.append("full-name", form.elements["full-name"].value);
       formData.append("company-name", form.elements["company-name"].value);
       formData.append("email", form.elements["email"].value);
       formData.append("message", form.elements["message"].value);
-      formData.append(
-        "cf-turnstile-response",
-        document.getElementById("cf-turnstile-response").value
-      );
-
-      // Submit with 15s timeout
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      formData.append("cf-turnstile-response", turnstileToken);
 
       const response = await fetch("/api/contact_form", {
         method: "POST",
@@ -344,10 +339,7 @@ document
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
-        signal: controller.signal,
       });
-
-      clearTimeout(timeout);
 
       if (response.redirected) {
         form.reset();
@@ -356,14 +348,10 @@ document
       }
 
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "Submission failed");
+      if (!response.ok) throw new Error(result.message);
     } catch (error) {
-      console.error("Error:", error);
-      alert(
-        error.name === "AbortError"
-          ? "Request took too long. Please try again."
-          : error.message || "Submission failed"
-      );
+      console.error("Submission error:", error);
+      alert(error.message || "Submission failed. Please try again.");
     } finally {
       submitBtn.disabled = false;
       submitBtn.value = originalBtnText;
