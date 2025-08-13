@@ -313,7 +313,7 @@ document
       const formData = new FormData(form);
 
       // Send the request to your Vercel endpoint
-      const response = await fetch("/api/contact_form.js", {
+      const response = await fetch("/api/contact_form", {
         method: "POST",
         body: formData,
         headers: {
