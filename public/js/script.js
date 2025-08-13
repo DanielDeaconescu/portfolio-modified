@@ -304,7 +304,7 @@ document
     const originalBtnText = submitBtn.value;
 
     try {
-      // 1. Validate required fields
+      // Validate required fields
       const requiredFields = ["full-name", "company-name", "email", "message"];
       const missingFields = requiredFields.filter(
         (field) => !form.elements[field].value.trim()
@@ -315,7 +315,7 @@ document
         return;
       }
 
-      // 2. Verify Turnstile token
+      // Verify Turnstile token
       const turnstileToken = document.getElementById(
         "cf-turnstile-response"
       ).value;
@@ -327,49 +327,39 @@ document
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // 3. Prepare form data as FormData (more reliable for file uploads)
-      const formData = new FormData(form);
+      // Create URLSearchParams from form data
+      const formData = new URLSearchParams();
+      formData.append("full-name", form.elements["full-name"].value);
+      formData.append("company-name", form.elements["company-name"].value);
+      formData.append("email", form.elements["email"].value);
+      formData.append("message", form.elements["message"].value);
+      formData.append("cf-turnstile-response", turnstileToken);
 
-      // 4. Add timeout to fetch (8 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      // Debug: Log what we're sending
+      console.log("Submitting:", Object.fromEntries(formData.entries()));
 
-      const response = await fetch("/api/contact_form.js", {
+      const response = await fetch("/api/contact_form", {
+        // Removed .js extension
         method: "POST",
         body: formData,
-        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
       });
 
-      clearTimeout(timeoutId);
-
-      // 5. Handle successful redirect
       if (response.redirected) {
-        form.reset(); // Reset the form before redirecting
+        form.reset();
         window.location.href = response.url;
         return;
       }
 
-      // 6. Handle JSON responses (errors)
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to submit form");
-        }
-      } else {
-        const text = await response.text();
-        throw new Error(text || "Unexpected response from server");
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Submission failed");
       }
     } catch (error) {
-      // 7. Improved error handling
-      if (error.name === "AbortError") {
-        alert(
-          "The request took too long. Please check your connection and try again."
-        );
-      } else {
-        alert(error.message || "An error occurred. Please try again later.");
-      }
-      console.error("Form submission error:", error);
+      console.error("Submission error:", error);
+      alert(error.message || "An error occurred. Please try again.");
     } finally {
       submitBtn.disabled = false;
       submitBtn.value = originalBtnText;
