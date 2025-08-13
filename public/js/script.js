@@ -327,56 +327,47 @@ document
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // 3. Prepare form data
-      const formData = {
-        "full-name": form.elements["full-name"].value,
-        "company-name": form.elements["company-name"].value,
-        email: form.elements["email"].value,
-        message: form.elements["message"].value,
-        "cf-turnstile-response": turnstileToken,
-      };
+      // 3. Prepare form data as FormData (more reliable for file uploads)
+      const formData = new FormData(form);
 
-      // 4. Add timeout to fetch
+      // 4. Add timeout to fetch (8 seconds)
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const response = await fetch("/api/contact_form.js", {
         method: "POST",
-        body: JSON.stringify(formData),
-        headers: {
-          "Content-Type": "application/json",
-        },
+        body: formData,
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
-      // 5. Handle response properly
+      // 5. Handle successful redirect
       if (response.redirected) {
+        form.reset(); // Reset the form before redirecting
         window.location.href = response.url;
         return;
       }
 
-      try {
+      // 6. Handle JSON responses (errors)
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.message || "Failed to submit form");
         }
-      } catch (jsonError) {
-        // Handle non-JSON responses
+      } else {
         const text = await response.text();
         throw new Error(text || "Unexpected response from server");
       }
     } catch (error) {
-      // 6. Improved error handling
+      // 7. Improved error handling
       if (error.name === "AbortError") {
-        alert("Request timed out. Please try again.");
-      } else {
         alert(
-          error.message.includes("An error o")
-            ? "Server error occurred. Please try again later."
-            : error.message
+          "The request took too long. Please check your connection and try again."
         );
+      } else {
+        alert(error.message || "An error occurred. Please try again later.");
       }
       console.error("Form submission error:", error);
     } finally {

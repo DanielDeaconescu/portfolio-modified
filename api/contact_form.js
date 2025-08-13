@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import axios from "axios";
 
-async function parseJSONBody(req) {
+async function parseFormData(req) {
   return new Promise((resolve, reject) => {
     let body = "";
     req.on("data", (chunk) => {
@@ -10,9 +10,10 @@ async function parseJSONBody(req) {
 
     req.on("end", () => {
       try {
-        resolve(JSON.parse(body));
+        const parsedData = new URLSearchParams(body);
+        resolve(Object.fromEntries(parsedData.entries()));
       } catch (err) {
-        reject(new Error("Invalid JSON format"));
+        reject(new Error("Invalid form data"));
       }
     });
 
@@ -28,8 +29,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Parse JSON data from request body
-    const formData = await parseJSONBody(req);
+    const formData = await parseFormData(req);
 
     const {
       "full-name": fullName,
@@ -39,28 +39,36 @@ export default async function handler(req, res) {
       "cf-turnstile-response": turnstileToken,
     } = formData;
 
-    // Validate required fields
     if (!fullName || !companyName || !email || !message || !turnstileToken) {
-      return res
-        .status(400)
-        .json({ message: "Toate câmpurile sunt obligatorii!" });
+      return res.status(400).json({ message: "All fields are required!" });
     }
 
-    // Verify Turnstile token with Cloudflare
-    const verification = await axios.post(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      new URLSearchParams({
-        secret: process.env.TURNSTILE_SECRET,
-        response: turnstileToken,
-      }).toString(),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-    );
+    // Verify Turnstile token (with timeout)
+    const verification = await Promise.race([
+      axios.post(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        new URLSearchParams({
+          secret: process.env.TURNSTILE_SECRET,
+          response: turnstileToken,
+        }).toString(),
+        {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          timeout: 5000, // 5 second timeout
+        }
+      ),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("CAPTCHA verification timeout")),
+          5000
+        )
+      ),
+    ]);
 
     if (!verification.data.success) {
-      return res.status(403).json({ message: "Verificarea CAPTCHA a eșuat!" });
+      return res.status(403).json({ message: "CAPTCHA verification failed!" });
     }
 
-    // Create transporter for nodemailer
+    // Configure transporter with timeout
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,
@@ -69,37 +77,37 @@ export default async function handler(req, res) {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      connectionTimeout: 5000, // 5 seconds
+      socketTimeout: 5000, // 5 seconds
     });
-
-    // Email options
-    const mailOptions = {
-      from: process.env.SMTP_USER,
-      to: "daniel.deaconescu98@gmail.com",
-      subject: "Someone filled out the form on danieldeaconescu.com",
-      text: `Full Name: ${fullName}\nCompany: ${companyName}\nEmail: ${email}\nMessage: ${message}`,
-    };
 
     // Send email with timeout
     await Promise.race([
-      transporter.sendMail(mailOptions),
+      transporter.sendMail({
+        from: process.env.SMTP_USER,
+        to: "daniel.deaconescu98@gmail.com",
+        subject: "New form submission from your website",
+        text: `Name: ${fullName}\nCompany: ${companyName}\nEmail: ${email}\nMessage: ${message}`,
+      }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("SMTP timeout")), 10000)
+        setTimeout(() => reject(new Error("Email sending timeout")), 5000)
       ),
     ]);
 
-    // Return success redirect
+    // Successful response with redirect
     return res.redirect(302, "/submitted/contact_form_submitted.html");
   } catch (error) {
-    console.error("Eroare la transmiterea mesajului:", error);
+    console.error("Submission error:", error.message);
 
-    if (error.message === "SMTP timeout") {
+    if (error.message.includes("timeout")) {
       return res
         .status(504)
         .json({ message: "Server timeout. Please try again." });
     }
 
     return res.status(500).json({
-      message: error.message || "Eroare la transmiterea mesajului.",
+      message:
+        error.message || "An error occurred while processing your request.",
     });
   }
 }
