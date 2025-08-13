@@ -304,7 +304,7 @@ document
     const originalBtnText = submitBtn.value;
 
     try {
-      // Validate required fields
+      // Client-side validation
       const requiredFields = ["full-name", "company-name", "email", "message"];
       const missingFields = requiredFields.filter(
         (field) => !form.elements[field].value.trim()
@@ -315,11 +315,7 @@ document
         return;
       }
 
-      // Verify Turnstile token
-      const turnstileToken = document.getElementById(
-        "cf-turnstile-response"
-      ).value;
-      if (!turnstileToken) {
+      if (!document.getElementById("cf-turnstile-response").value) {
         alert("Please complete the CAPTCHA verification");
         return;
       }
@@ -327,25 +323,31 @@ document
       submitBtn.disabled = true;
       submitBtn.value = "Sending...";
 
-      // Create URLSearchParams from form data
+      // Prepare form data
       const formData = new URLSearchParams();
       formData.append("full-name", form.elements["full-name"].value);
       formData.append("company-name", form.elements["company-name"].value);
       formData.append("email", form.elements["email"].value);
       formData.append("message", form.elements["message"].value);
-      formData.append("cf-turnstile-response", turnstileToken);
+      formData.append(
+        "cf-turnstile-response",
+        document.getElementById("cf-turnstile-response").value
+      );
 
-      // Debug: Log what we're sending
-      console.log("Submitting:", Object.fromEntries(formData.entries()));
+      // Submit with 15s timeout
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
 
       const response = await fetch("/api/contact_form", {
-        // Removed .js extension
         method: "POST",
         body: formData,
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (response.redirected) {
         form.reset();
@@ -353,13 +355,15 @@ document
         return;
       }
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || "Submission failed");
-      }
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Submission failed");
     } catch (error) {
-      console.error("Submission error:", error);
-      alert(error.message || "An error occurred. Please try again.");
+      console.error("Error:", error);
+      alert(
+        error.name === "AbortError"
+          ? "Request took too long. Please try again."
+          : error.message || "Submission failed"
+      );
     } finally {
       submitBtn.disabled = false;
       submitBtn.value = originalBtnText;
