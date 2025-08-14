@@ -303,19 +303,20 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
-    // Create form data and log for debugging
+    // Create form data
     const formData = new FormData(form);
-    console.log("Submitting:", Object.fromEntries(formData.entries()));
 
+    // Submit with timeout
     const response = await fetch("/api/contact", {
       method: "POST",
       body: formData,
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(15000), // 15 seconds total timeout
     });
 
     if (response.redirected) {
       form.reset();
-      return (window.location.href = response.url);
+      window.location.href = response.url;
+      return;
     }
 
     const result = await response.json();
@@ -326,6 +327,7 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
         ? "Request took too long. Please try again."
         : error.message || "Submission failed"
     );
+    console.error("Submission error:", error);
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";
