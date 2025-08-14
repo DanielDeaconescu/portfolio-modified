@@ -303,31 +303,42 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
-    // Create form data
     const formData = new FormData(form);
-
-    // Submit with timeout
     const response = await fetch("/api/contact", {
       method: "POST",
       body: formData,
-      signal: AbortSignal.timeout(15000), // 15 seconds total timeout
+      signal: AbortSignal.timeout(15000),
     });
 
+    // Handle redirect
     if (response.redirected) {
       form.reset();
-      window.location.href = response.url;
-      return;
+      return (window.location.href = response.url);
     }
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error);
+    // Handle JSON response
+    const contentType = response.headers.get("content-type");
+    if (contentType?.includes("application/json")) {
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Submission failed");
+    }
+    // Handle plain text response
+    else {
+      const text = await response.text();
+      if (!response.ok) throw new Error(text || "Submission failed");
+    }
   } catch (error) {
-    alert(
-      error.name === "TimeoutError"
-        ? "Request took too long. Please try again."
-        : error.message || "Submission failed"
-    );
-    console.error("Submission error:", error);
+    let message = "Submission failed";
+    if (error.name === "TimeoutError") {
+      message = "Request took too long";
+    } else if (error.message.includes("JSON")) {
+      message = "Server error occurred";
+    } else {
+      message = error.message;
+    }
+
+    alert(message);
+    console.error("Error:", error);
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";
