@@ -300,33 +300,44 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
   const submitBtn = form.querySelector(".submit-btn");
 
   try {
-    // Simple validation
+    // Basic validation
     if (!document.getElementById("cf-turnstile-response").value) {
-      throw new Error("Please complete CAPTCHA");
+      throw new Error("Please complete CAPTCHA verification");
     }
 
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
-    // Create FormData (works better with Vercel)
+    // Create form data
     const formData = new FormData(form);
 
+    // Add timeout handling
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
     const response = await fetch("/api/contact", {
-      // Changed endpoint
       method: "POST",
       body: formData,
+      signal: controller.signal,
     });
+
+    clearTimeout(timeout);
 
     if (!response.ok) {
       const error = await response.text();
       throw new Error(error || "Submission failed");
     }
 
+    // Success - reset and redirect
     form.reset();
     window.location.href = "/submitted/contact_form_submitted.html";
   } catch (error) {
-    alert(error.message);
-    console.error("Submission error:", error);
+    alert(
+      error.name === "AbortError"
+        ? "Request took too long. Please try again."
+        : error.message
+    );
+    console.error("Error:", error);
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";
