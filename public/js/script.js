@@ -300,45 +300,52 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
   const submitBtn = form.querySelector(".submit-btn");
 
   try {
+    // Validate required fields
+    const requiredFields = ["full-name", "company-name", "email", "message"];
+    const missingFields = requiredFields.filter(
+      (field) => !form.elements[field].value.trim()
+    );
+    if (missingFields.length > 0)
+      throw new Error(`Missing: ${missingFields.join(", ")}`);
+
+    if (!document.getElementById("cf-turnstile-response").value) {
+      throw new Error("Please complete CAPTCHA");
+    }
+
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
+    // Create form data
     const formData = new FormData(form);
+
+    // Add timeout handling (7 seconds)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+
     const response = await fetch("/api/contact", {
       method: "POST",
       body: formData,
-      signal: AbortSignal.timeout(15000),
+      signal: controller.signal,
     });
 
-    // Handle redirect
+    clearTimeout(timeout);
+
+    // Handle response
     if (response.redirected) {
       form.reset();
       return (window.location.href = response.url);
     }
 
-    // Handle JSON response
-    const contentType = response.headers.get("content-type");
-    if (contentType?.includes("application/json")) {
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Submission failed");
-    }
-    // Handle plain text response
-    else {
-      const text = await response.text();
-      if (!response.ok) throw new Error(text || "Submission failed");
-    }
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Submission failed");
   } catch (error) {
-    let message = "Submission failed";
-    if (error.name === "TimeoutError") {
-      message = "Request took too long";
-    } else if (error.message.includes("JSON")) {
-      message = "Server error occurred";
-    } else {
-      message = error.message;
-    }
+    const message =
+      error.name === "AbortError"
+        ? "Request took too long. Please try again."
+        : error.message;
 
     alert(message);
-    console.error("Error:", error);
+    console.error("Submission error:", error);
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";
