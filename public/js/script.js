@@ -300,52 +300,44 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
   const submitBtn = form.querySelector(".submit-btn");
 
   try {
-    // Validate required fields
-    const requiredFields = ["full-name", "company-name", "email", "message"];
-    const missingFields = requiredFields.filter(
-      (field) => !form.elements[field].value.trim()
-    );
-    if (missingFields.length > 0)
-      throw new Error(`Missing: ${missingFields.join(", ")}`);
-
-    if (!document.getElementById("cf-turnstile-response").value) {
-      throw new Error("Please complete CAPTCHA");
-    }
-
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
     // Create form data
     const formData = new FormData(form);
 
-    // Add timeout handling (7 seconds)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    // Attempt submission with retries
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch("/api/contact", {
+          method: "POST",
+          body: formData,
+          signal: AbortSignal.timeout(8000), // 8 seconds max
+        });
 
-    const response = await fetch("/api/contact", {
-      method: "POST",
-      body: formData,
-      signal: controller.signal,
-    });
+        if (response.redirected) {
+          form.reset();
+          return (window.location.href = response.url);
+        }
 
-    clearTimeout(timeout);
-
-    // Handle response
-    if (response.redirected) {
-      form.reset();
-      return (window.location.href = response.url);
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2)
+          await new Promise((r) => setTimeout(r, 1000 * attempt));
+      }
     }
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Submission failed");
+    throw lastError;
   } catch (error) {
-    const message =
-      error.name === "AbortError"
+    alert(
+      error.name === "TimeoutError"
         ? "Request took too long. Please try again."
-        : error.message;
-
-    alert(message);
-    console.error("Submission error:", error);
+        : error.message || "Submission failed"
+    );
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";
