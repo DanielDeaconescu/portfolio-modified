@@ -300,9 +300,16 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
   const submitBtn = form.querySelector(".submit-btn");
 
   try {
-    // Basic validation
+    // Validate required fields
+    const requiredFields = ["full-name", "company-name", "email", "message"];
+    const missingFields = requiredFields.filter(
+      (field) => !form.elements[field].value.trim()
+    );
+    if (missingFields.length > 0)
+      throw new Error(`Missing: ${missingFields.join(", ")}`);
+
     if (!document.getElementById("cf-turnstile-response").value) {
-      throw new Error("Please complete CAPTCHA verification");
+      throw new Error("Please complete CAPTCHA");
     }
 
     submitBtn.disabled = true;
@@ -311,9 +318,9 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
     // Create form data
     const formData = new FormData(form);
 
-    // Add timeout handling
+    // Add timeout handling (7 seconds)
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    const timeout = setTimeout(() => controller.abort(), 7000);
 
     const response = await fetch("/api/contact", {
       method: "POST",
@@ -323,21 +330,22 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
 
     clearTimeout(timeout);
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(error || "Submission failed");
+    // Handle response
+    if (response.redirected) {
+      form.reset();
+      return (window.location.href = response.url);
     }
 
-    // Success - reset and redirect
-    form.reset();
-    window.location.href = "/submitted/contact_form_submitted.html";
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "Submission failed");
   } catch (error) {
-    alert(
+    const message =
       error.name === "AbortError"
         ? "Request took too long. Please try again."
-        : error.message
-    );
-    console.error("Error:", error);
+        : error.message;
+
+    alert(message);
+    console.error("Submission error:", error);
   } finally {
     submitBtn.disabled = false;
     submitBtn.value = "Submit";

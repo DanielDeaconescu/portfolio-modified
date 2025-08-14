@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 
-// Configure transporter outside handler (reused between invocations)
+// Reusable transporter (Vercel keeps warm instances)
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: 465,
@@ -9,12 +9,12 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
-  connectionTimeout: 5000, // 5 seconds
-  socketTimeout: 5000,
+  connectionTimeout: 4000, // 4 seconds
+  socketTimeout: 4000,
 });
 
 export default async (req, res) => {
-  // Immediately set timeout headers
+  // Set timeout headers
   res.setHeader("Cache-Control", "no-store");
 
   try {
@@ -22,28 +22,41 @@ export default async (req, res) => {
       return res.status(405).json({ error: "Method not allowed" });
     }
 
-    // Parse form data with timeout
-    const [formData] = await Promise.race([
-      new Promise((resolve) => {
-        let body = [];
-        req.on("data", (chunk) => body.push(chunk));
-        req.on("end", () => resolve([Buffer.concat(body)]));
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 6000)
-      ),
-    ]);
+    // Parse form data with 5s timeout
+    const formData = await new Promise((resolve, reject) => {
+      let body = [];
+      const timeout = setTimeout(() => {
+        req.destroy();
+        reject(new Error("Form parse timeout"));
+      }, 5000);
 
-    // Send email with timeout
+      req.on("data", (chunk) => body.push(chunk));
+      req.on("end", () => {
+        clearTimeout(timeout);
+        resolve(Buffer.concat(body));
+      });
+      req.on("error", reject);
+    });
+
+    // Convert to object (assuming URL-encoded form)
+    const params = new URLSearchParams(formData.toString());
+    const {
+      "full-name": fullName,
+      "company-name": company,
+      email,
+      message,
+    } = Object.fromEntries(params);
+
+    // Send email with 4s timeout
     await Promise.race([
       transporter.sendMail({
         from: `"Contact Form" <${process.env.SMTP_USER}>`,
         to: process.env.RECIPIENT_EMAIL,
         subject: "New Form Submission",
-        text: "Test message", // Simplified for testing
+        text: `Name: ${fullName}\nCompany: ${company}\nEmail: ${email}\nMessage: ${message}`,
       }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("SMTP timeout")), 5000)
+        setTimeout(() => reject(new Error("SMTP timeout")), 4000)
       ),
     ]);
 
