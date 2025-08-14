@@ -303,35 +303,23 @@ document.getElementById("contactForm").addEventListener("submit", async (e) => {
     submitBtn.disabled = true;
     submitBtn.value = "Sending...";
 
-    // Create form data
+    // Create form data and log for debugging
     const formData = new FormData(form);
+    console.log("Submitting:", Object.fromEntries(formData.entries()));
 
-    // Attempt submission with retries
-    let lastError;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const response = await fetch("/api/contact", {
-          method: "POST",
-          body: formData,
-          signal: AbortSignal.timeout(8000), // 8 seconds max
-        });
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      body: formData,
+      signal: AbortSignal.timeout(8000),
+    });
 
-        if (response.redirected) {
-          form.reset();
-          return (window.location.href = response.url);
-        }
-
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error);
-        return;
-      } catch (error) {
-        lastError = error;
-        if (attempt < 2)
-          await new Promise((r) => setTimeout(r, 1000 * attempt));
-      }
+    if (response.redirected) {
+      form.reset();
+      return (window.location.href = response.url);
     }
 
-    throw lastError;
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error);
   } catch (error) {
     alert(
       error.name === "TimeoutError"
