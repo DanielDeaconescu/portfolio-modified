@@ -294,66 +294,41 @@ function windowScroll() {
 document.addEventListener("DOMContentLoaded", windowScroll);
 
 // Processing the form
-document
-  .getElementById("contactForm")
-  .addEventListener("submit", async function (e) {
-    e.preventDefault();
+document.getElementById("contactForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const submitBtn = form.querySelector(".submit-btn");
 
-    const form = e.target;
-    const submitBtn = form.querySelector(".submit-btn");
-    const originalBtnText = submitBtn.value;
-
-    try {
-      // Validate fields
-      const requiredFields = ["full-name", "company-name", "email", "message"];
-      const missingFields = requiredFields.filter(
-        (field) => !form.elements[field].value.trim()
-      );
-
-      if (missingFields.length > 0) {
-        alert(`Please fill in: ${missingFields.join(", ")}`);
-        return;
-      }
-
-      const turnstileToken = document.getElementById(
-        "cf-turnstile-response"
-      ).value;
-      if (!turnstileToken) {
-        alert("Please complete the CAPTCHA verification");
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.value = "Sending...";
-
-      const formData = new URLSearchParams();
-      formData.append("full-name", form.elements["full-name"].value);
-      formData.append("company-name", form.elements["company-name"].value);
-      formData.append("email", form.elements["email"].value);
-      formData.append("message", form.elements["message"].value);
-      formData.append("cf-turnstile-response", turnstileToken);
-
-      const response = await fetch("/api/contact_form", {
-        method: "POST",
-        body: formData,
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      });
-
-      if (response.redirected) {
-        form.reset();
-        window.location.href = response.url;
-        return;
-      }
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message);
-    } catch (error) {
-      console.error("Submission error:", error);
-      alert(error.message || "Submission failed. Please try again.");
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.value = originalBtnText;
+  try {
+    // Simple validation
+    if (!document.getElementById("cf-turnstile-response").value) {
+      throw new Error("Please complete CAPTCHA");
     }
-  });
+
+    submitBtn.disabled = true;
+    submitBtn.value = "Sending...";
+
+    // Create FormData (works better with Vercel)
+    const formData = new FormData(form);
+
+    const response = await fetch("/api/contact", {
+      // Changed endpoint
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || "Submission failed");
+    }
+
+    form.reset();
+    window.location.href = "/submitted/contact_form_submitted.html";
+  } catch (error) {
+    alert(error.message);
+    console.error("Submission error:", error);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.value = "Submit";
+  }
+});
