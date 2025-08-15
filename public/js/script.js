@@ -375,10 +375,10 @@ form.addEventListener("submit", async (e) => {
 
   const jsonData = {
     name: form.elements.name.value,
-    company: form.elements["company-name"].value,
+    "company-name": form.elements["company-name"].value,
     email: form.elements.email.value,
     message: form.elements.message.value,
-    "cf-turnstile-token": turnstileToken,
+    "cf-turnstile-response": turnstileToken,
   };
 
   try {
@@ -390,7 +390,7 @@ form.addEventListener("submit", async (e) => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || "Request failed");
+      throw new Error(errorData.error || "Request failed");
     }
 
     showToast("Message sent succefully!");

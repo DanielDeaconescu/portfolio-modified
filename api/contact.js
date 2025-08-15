@@ -17,7 +17,13 @@ export default async (req, res) => {
     });
 
     // Validate
-    if (!data.name || !data["company-name"] || !data.email || !data.message) {
+    if (
+      !data.name ||
+      !data["company-name"] ||
+      !data.email ||
+      !data.message ||
+      !data["cf-turnstile-response"]
+    ) {
       res.status(400).json({ error: "All fields are required!" });
     }
 
