@@ -791,3 +791,33 @@ select {
 .no-display {
   display: none;
 }
+
+/* Styling related to the form */
+#toast {
+  position: fixed;
+  left: 50%;
+  top: 2rem;
+  transform: translate(-50%, -50%);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  z-index: 9999;
+  color: var(--clr-black);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.toast-hidden {
+  opacity: 0 !important;
+}
+
+.toast-visible {
+  opacity: 1 !important;
+}
+
+.toast-success {
+  background-color: rgb(60, 135, 58);
+}
+
+.toast-error {
+  background-color: red;
+}

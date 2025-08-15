@@ -1,76 +1,65 @@
 import nodemailer from "nodemailer";
-import busboy from "busboy";
-
-// Configuration with aggressive timeouts
-const mailConfig = {
-  host: process.env.SMTP_HOST,
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  connectionTimeout: 3000, // 3 seconds
-  socketTimeout: 3000,
-  greetingTimeout: 3000,
-  tls: {
-    rejectUnauthorized: false, // For self-signed certs
-    minVersion: "TLSv1.2", // Force modern TLS
-  },
-};
-
-// Global transporter (reused between invocations)
-let transporter;
-let lastSuccessTime = 0;
 
 export default async (req, res) => {
   try {
-    if (req.method !== "POST") {
-      return res.status(405).json({ error: "Method not allowed" });
-    }
-
-    // Parse multipart form data
-    const formData = await new Promise((resolve, reject) => {
-      const bb = busboy({ headers: req.headers });
-      const result = {};
-
-      bb.on("field", (name, value) => {
-        result[name] = value;
+    // Parse the JSON
+    const data = await new Promise((resolve, reject) => {
+      let body = "";
+      req.on("data", (chunk) => (body += chunk));
+      req.on("end", () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch (error) {
+          new Error("Invalid JSON");
+        }
       });
-
-      bb.on("close", () => {
-        resolve(result);
-      });
-
-      bb.on("error", (err) => {
-        reject(err);
-      });
-
-      req.pipe(bb);
+      req.on("error", reject);
     });
 
-    console.log("Received form data:", formData); // Debug log
+    // Validate
+    if (!data.name || !data["company-name"] || !data.email || !data.message) {
+      res.status(400).json({ error: "All fields are required!" });
+    }
 
-    // Initialize transporter if needed
-    if (!transporter) {
-      transporter = nodemailer.createTransport(mailConfig);
-      await transporter.verify();
+    // Verify the Turnstile (https://challenges.cloudflare.com/turnstile/v0/siteverify)
+    const turnstileResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          secret: process.env.TURNSTILE_SECRET_KEY,
+          response: data["cf-turnstile-response"],
+        }),
+      }
+    ).then((res) => res.json());
+
+    if (!turnstileResponse.success) {
+      return res.status(400).json({ error: "CAPTCHA verification failed" });
     }
 
     // Send email
-    await transporter.sendMail({
-      from: `"Contact Form" <${process.env.SMTP_USER}>`,
-      to: process.env.RECIPIENT_EMAIL,
-      subject: "New Form Submission",
-      text: `Name: ${formData["full-name"]}
-Company: ${formData["company-name"]}
-Email: ${formData.email}
-Message: ${formData.message}`,
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      post: 465,
+      secure: true,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMPT_PASS,
+      },
+      connectionTimeout: 5000,
     });
 
-    return res.redirect(302, "/submitted/contact_form_submitted.html");
+    await transporter.sendMail({
+      from: `Contact Form <${process.env.SMTP_USER}>`,
+      to: process.env.RECIPIENT_EMAIL,
+      subject: `New Message from ${data.name}`,
+      text: `Name: ${data.name}\n Company: ${data.company}\n Email: ${data.email}\n Message: ${data.message}`,
+    });
+
+    res.status(200).json({ success: "Message sent successfully" });
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Server error: ", error);
+    res.status(500).json({ error: error.message || "Internal Server Error" });
   }
 };

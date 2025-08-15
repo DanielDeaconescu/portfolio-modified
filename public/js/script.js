@@ -293,61 +293,112 @@ function windowScroll() {
 
 document.addEventListener("DOMContentLoaded", windowScroll);
 
-// Processing the form
-document.getElementById("contactForm").addEventListener("submit", async (e) => {
+// Form handling
+
+// 1. Toast Controller
+const showToast = (message, isError = false) => {
+  const toast = document.getElementById("toast");
+  toast.className = isError ? "toast-error" : "toast-success";
+  toast.textContent = message;
+  toast.classList.add("toast-visible");
+
+  setTimeout(() => {
+    toast.classList.remove("toast-visible");
+  }, 3000);
+};
+
+showToast("Message sent successfully!");
+
+// 2. Form Validation
+
+const validateForm = (form) => {
+  const errors = [];
+  const fields = [
+    {
+      name: "name",
+      label: "Full Name",
+    },
+    {
+      name: "company-name",
+      label: "Company Name",
+    },
+    {
+      name: "email",
+      label: "Email",
+    },
+    {
+      name: "message",
+      label: "Message",
+    },
+  ];
+
+  // If one of these fields is missing, throw an error
+  fields.forEach((field) => {
+    if (!form.elements[field.name].value.trim()) {
+      errors.push(`${field.label} is required!`);
+    }
+  });
+
+  // Add a basic email verification
+  const email = form.elements.email.value;
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.push("Please provide a valid email!");
+  }
+
+  return errors;
+};
+
+// 3. Form submission (we do the Turnstile verification here)
+const form = document.getElementById("contactForm");
+
+form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = e.target;
-  const submitBtn = form.querySelector(".submit-btn");
+
+  // Turnstile Verification
+  const turnstileToken = document.querySelector(
+    '[name="cf-turnstile-response"]'
+  )?.value;
+
+  if (!turnstileToken) {
+    showToast("Please complete the CAPTCHA verification", true);
+  }
+
+  // Validate
+  const errors = validateForm(form);
+  if (errors.length > 0) {
+    showToast(errors.join(", "), true);
+    return;
+  }
+
+  const jsonData = {
+    name: form.elements.name.value,
+    company: form.elements["company-name"].value,
+    email: form.elements.email.value,
+    message: form.elements.message.value,
+    "cf-turnstile-token": turnstileToken,
+  };
 
   try {
-    // Validate required fields
-    const requiredFields = ["full-name", "company-name", "email", "message"];
-    const missingFields = requiredFields.filter(
-      (field) => !form.elements[field].value.trim()
-    );
-    if (missingFields.length > 0)
-      throw new Error(`Missing: ${missingFields.join(", ")}`);
-
-    if (!document.getElementById("cf-turnstile-response").value) {
-      throw new Error("Please complete CAPTCHA");
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.value = "Sending...";
-
-    // Create form data
-    const formData = new FormData(form);
-
-    // Add timeout handling (7 seconds)
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
-
     const response = await fetch("/api/contact", {
       method: "POST",
-      body: formData,
-      signal: controller.signal,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(jsonData),
     });
 
-    clearTimeout(timeout);
-
-    // Handle response
-    if (response.redirected) {
-      form.reset();
-      return (window.location.href = response.url);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Request failed");
     }
 
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Submission failed");
+    showToast("Message sent succefully!");
+    form.reset();
+    setTimeout(() => {
+      window.location.href = "/submitted/contact_form_submitted.html";
+    }, 1500);
   } catch (error) {
-    const message =
-      error.name === "AbortError"
-        ? "Request took too long. Please try again."
-        : error.message;
-
-    alert(message);
-    console.error("Submission error:", error);
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.value = "Submit";
+    console.error("Submission failed: ", error);
+    showToast(error.message || "Failed to send message", true);
   }
 });
