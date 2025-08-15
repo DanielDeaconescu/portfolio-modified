@@ -41,7 +41,7 @@ export default async (req, res) => {
     // Send email
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      post: 465,
+      port: 465,
       secure: true,
       auth: {
         user: process.env.SMTP_USER,
