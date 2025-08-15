@@ -60,7 +60,7 @@ export default async (req, res) => {
       from: `Contact Form <${process.env.SMTP_USER}>`,
       to: process.env.RECIPIENT_EMAIL,
       subject: `New Message from ${data.name}`,
-      text: `Name: ${data.name}\n Company: ${data.company}\n Email: ${data.email}\n Message: ${data.message}`,
+      text: `Name: ${data.name}\n Company: ${data["company-name"]}\n Email: ${data.email}\n Message: ${data.message}`,
     });
 
     res
