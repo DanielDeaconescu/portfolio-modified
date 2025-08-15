@@ -10,7 +10,7 @@ export default async (req, res) => {
         try {
           resolve(JSON.parse(body));
         } catch (error) {
-          new Error("Invalid JSON");
+          reject(new Error("Invalid JSON"));
         }
       });
       req.on("error", reject);
@@ -57,7 +57,9 @@ export default async (req, res) => {
       text: `Name: ${data.name}\n Company: ${data.company}\n Email: ${data.email}\n Message: ${data.message}`,
     });
 
-    res.status(200).json({ success: "Message sent successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Message sent successfully" });
   } catch (error) {
     console.error("Server error: ", error);
     res.status(500).json({ error: error.message || "Internal Server Error" });

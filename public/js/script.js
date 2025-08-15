@@ -363,6 +363,7 @@ form.addEventListener("submit", async (e) => {
 
   if (!turnstileToken) {
     showToast("Please complete the CAPTCHA verification", true);
+    return;
   }
 
   // Validate
