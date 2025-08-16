@@ -101,10 +101,13 @@ select {
   background-color: var(--clr-darkest);
   color: var(--clr-white);
   z-index: 101;
+  height: 86px;
 }
 
 .link-custom {
   padding: 1.5rem 0;
+  display: flex;
+  align-items: center;
 }
 
 .link-custom:hover {
@@ -116,7 +119,6 @@ select {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 0;
 }
 
 .logo_img {

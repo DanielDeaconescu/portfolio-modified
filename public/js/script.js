@@ -102,28 +102,6 @@ checkScreenWidth();
 // Add an event listener to detect screen resize
 window.addEventListener("resize", checkScreenWidth);
 
-// modal functionality
-
-// create a function that opens a modal based on the specified number
-// const openModal = function (modalNumber) {
-//   const correspondingModal = document.querySelector(
-//     `.my_modal[data-modal="${modalNumber}"]`
-//   );
-//   correspondingModal.classList.remove("display-none");
-//   correspondingModal.scrollIntoView({ behavior: "smooth", block: "start" });
-//   overlay.classList.remove("display-none");
-//   document.querySelector("body").style.overflowY = "hidden";
-// };
-
-// create a function that checks which modal is currently open and returns its data-project
-// const closeModal = function () {
-//   // check which modal does not have the "displayy-none" class
-//   const visibleModal = document.querySelector(".my_modal:not(.display-none)");
-//   if (visibleModal) visibleModal.classList.add("display-none");
-//   overlay.classList.add("display-none");
-//   document.querySelector("body").style.overflowY = "auto";
-// };
-
 allCards.forEach((card) => {
   card.addEventListener("click", function (e) {
     const clickedCard = e.target.closest(".card").dataset.project;
@@ -166,38 +144,12 @@ tabsContainer.addEventListener("click", function (e) {
     .classList.add("description-active");
 });
 
-// scrolling functionality
-
-// const aboutMeBtn = document.querySelector(".about-me-test");
-// aboutMeBtn.addEventListener("click", function (e) {
-//   e.preventDefault();
-
-//   const target = this.getAttribute("href").substring(1);
-//   const targetSection = document.getElementById(target);
-
-//   const navHeight = document
-//     .querySelector(".navbar")
-//     .getBoundingClientRect().height;
-//   const scrollPosition = targetSection.offsetTop - navHeight;
-
-//   window.scrollTo({
-//     top: scrollPosition,
-//     behavior: "smooth",
-//   });
-// });
-
 const allNavLinks = document.querySelectorAll(".link-custom");
 allNavLinks.forEach((item) => {
   item.addEventListener("click", function (e) {
     e.preventDefault();
     const targetID = this.getAttribute("href").substring(1);
     const targetSection = document.getElementById(targetID);
-    // we need to scroll down up until the top of each section - the height of the navigation bar
-    console.log(targetID);
-
-    // const navHeight = document
-    //   .querySelector(".navbar")
-    //   .getBoundingClientRect().height;
     let scrollPosition;
 
     if (targetID === "my-skills") {
@@ -222,56 +174,6 @@ const closeForm = function () {
 const checkIfFormIsOpen = function () {
   return contactForm.classList.contains("display-none") ? false : true;
 };
-
-// Form button functionality
-// formButton.addEventListener("click", function () {
-//   contactForm.classList.toggle("display-none");
-//   overlay.classList.toggle("display-none");
-//   checkIfFormIsOpen();
-//   const isFormOpen = checkIfFormIsOpen();
-
-//   if (isFormOpen) {
-//     navigation.classList.add("display-none");
-//     firstInput.focus();
-//   } else {
-//     navigation.classList.remove("display-none");
-//     contactForm.reset();
-//   }
-// });
-
-// closing the form when clicking outside
-// overlay.addEventListener("click", function () {
-//   closeForm();
-//   const isFormOpen = checkIfFormIsOpen();
-//   isFormOpen
-//     ? navigation.classList.add("display-none")
-//     : navigation.classList.remove("display-none");
-// });
-
-// // closing the form with the "Esc" key
-// document.addEventListener("keydown", function (e) {
-//   if (e.key === "Escape") closeForm();
-//   const isFormOpen = checkIfFormIsOpen();
-//   isFormOpen
-//     ? navigation.classList.add("display-none")
-//     : navigation.classList.remove("display-none");
-// });
-
-// Closing Prompt Functionality
-const workInProgressPrompt = document.querySelector(
-  ".work-in-progress-info-note"
-);
-const closingButton = document.querySelector(".closing-button");
-
-if (localStorage.getItem("workInProgressClosed") === "true") {
-  workInProgressPrompt.classList.add("d-none");
-}
-
-closingButton.addEventListener("click", function () {
-  workInProgressPrompt.classList.add("d-none");
-
-  localStorage.setItem("workInProgressClosed", "true");
-});
 
 // Back to top functionality
 backToTopButton.addEventListener("click", function () {
