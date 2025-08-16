@@ -333,7 +333,7 @@ const validateForm = (form) => {
   // If one of these fields is missing, throw an error
   fields.forEach((field) => {
     if (!form.elements[field.name].value.trim()) {
-      errors.push(`${field.label} is required!`);
+      errors.push(`${field.label} required`);
     }
   });
 
