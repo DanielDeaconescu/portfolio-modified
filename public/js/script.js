@@ -307,8 +307,6 @@ const showToast = (message, isError = false) => {
   }, 3000);
 };
 
-showToast("Message sent successfully!");
-
 // 2. Form Validation
 
 const validateForm = (form) => {
