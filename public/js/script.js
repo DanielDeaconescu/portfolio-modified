@@ -252,9 +252,18 @@ const validateForm = (form) => {
 // 3. Form submission (we do the Turnstile verification here)
 const form = document.getElementById("contactForm");
 
+const showSpinner = (show) => {
+  if (show) {
+    document.querySelector(".spinner-border").classList.remove("d-none");
+  } else {
+    document.querySelector(".spinner-border").classList.add("d-none");
+  }
+};
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const form = e.target;
+  showSpinner(true);
 
   // Turnstile Verification
   const turnstileToken = document.querySelector(
@@ -263,6 +272,7 @@ form.addEventListener("submit", async (e) => {
 
   if (!turnstileToken) {
     showToast("Please complete the CAPTCHA verification", true);
+    showSpinner(false);
     return;
   }
 
@@ -270,6 +280,7 @@ form.addEventListener("submit", async (e) => {
   const errors = validateForm(form);
   if (errors.length > 0) {
     showToast(errors.join(", "), true);
+    showSpinner(false);
     return;
   }
 
@@ -295,11 +306,13 @@ form.addEventListener("submit", async (e) => {
 
     showToast("Message sent succefully!");
     form.reset();
+    showSpinner(false);
     setTimeout(() => {
       window.location.href = "/submitted/contact_form_submitted.html";
     }, 1500);
   } catch (error) {
     console.error("Submission failed: ", error);
     showToast(error.message || "Failed to send message", true);
+    showSpinner(false);
   }
 });
