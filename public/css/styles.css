@@ -823,3 +823,6 @@ select {
 .toast-error {
   background-color: red;
 }
+
+.spinner-border-custom {
+}
