@@ -824,5 +824,16 @@ select {
   background-color: red;
 }
 
-.spinner-border-custom {
+/* Styling the submitted page */
+
+.logo-text {
+  font-size: 3rem;
+}
+
+.back-homepage-custom {
+  transition: opacity 0.3s ease;
+}
+
+.back-homepage-custom:hover {
+  opacity: 0.9;
 }
